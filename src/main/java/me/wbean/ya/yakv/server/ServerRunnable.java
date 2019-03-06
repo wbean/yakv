@@ -13,6 +13,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.logging.Logger;
 
 /**
@@ -25,12 +26,10 @@ public class ServerRunnable implements Runnable{
 
     private ServerSocketChannel serverSocketChannel;
     private Selector connectSelector;
-    private Selector ioSelector;
-    private Map<SelectionKey, SocketChannel> currentSocket;
+    private Queue<SocketChannel> currentSocket;
 
-    public ServerRunnable(int port, Selector connectSelector, Selector ioSelector, Map<SelectionKey, SocketChannel> currentSocket) throws IOException {
+    public ServerRunnable(int port, Selector connectSelector, Queue<SocketChannel> currentSocket) throws IOException {
         this.connectSelector = connectSelector;
-        this.ioSelector = ioSelector;
         this.currentSocket = currentSocket;
 
         serverSocketChannel = ServerSocketChannel.open();
@@ -42,7 +41,7 @@ public class ServerRunnable implements Runnable{
     @Override
     public void run() {
         while (true){
-            int readyCount = 0;
+            int readyCount;
             try {
                 readyCount = connectSelector.select(1000);
 
@@ -56,9 +55,7 @@ public class ServerRunnable implements Runnable{
                     if(key.isAcceptable()){
                         logger.info("accept");
                         SocketChannel socketChannel = serverSocketChannel.accept();
-                        socketChannel.configureBlocking(false);
-                        SelectionKey selectionKey = socketChannel.register(ioSelector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                        currentSocket.put(selectionKey, socketChannel);
+                        currentSocket.offer(socketChannel);
                     }
                     logger.info("select key remove");
                     selectionKeys.remove();

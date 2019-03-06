@@ -79,7 +79,7 @@ public class ServerTest {
 
         int aa;
         while ((aa = isr.read()) > 0){
-            System.out.println(aa);
+            System.out.println((char)aa);
         }
     }
 }
