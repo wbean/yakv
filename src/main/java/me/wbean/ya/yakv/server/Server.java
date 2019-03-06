@@ -7,22 +7,35 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+import javax.xml.crypto.KeySelector;
 
-public class Server {
+public class Server{
     Logger logger = Logger.getLogger(Server.class.getName());
 
-    private volatile AtomicBoolean running;
+    private static volatile AtomicBoolean running;
 
-    ServerSocketChannel serverSocketChannel;
+
+
+    private Map<SelectionKey, SocketChannel> currentSocket;
+
+    private Selector connectSelector = Selector.open();
+    private Selector ioSelector = Selector.open();
+
+    private int port;
+
+
     public Server(int port) throws IOException {
+        this.port = port;
         running = new AtomicBoolean(false);
+        currentSocket = new ConcurrentHashMap<>(16);
 
-        serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(port));
-        serverSocketChannel.configureBlocking(false);
     }
 
     public void start() throws IOException {
@@ -30,38 +43,8 @@ public class Server {
             throw new RuntimeException("server already start");
         }
 
-        Selector connectSelector = Selector.open();
-        serverSocketChannel.register(connectSelector,  SelectionKey.OP_ACCEPT);
+        new Thread(new ServerRunnable(port, connectSelector, ioSelector, currentSocket)).start();
 
-        while (true){
-            int readyCount = connectSelector.select(1000);
-            if(readyCount == 0) {
-                logger.info("wait for connect");
-                continue;
-            }
-            Iterator<SelectionKey> selectionKeys = connectSelector.keys().iterator();
-            while (selectionKeys.hasNext()){
-                SelectionKey key = selectionKeys.next();
-                if(key.isConnectable()){
-                    logger.info("connected");
-
-                }else if(key.isAcceptable()){
-                    logger.info("accept");
-                    SocketChannel socketChannel = serverSocketChannel.accept();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(48);
-                    socketChannel.read(byteBuffer);
-                    String msg = new String(byteBuffer.array());
-                    logger.info(msg);
-                }else if(key.isReadable()){
-                    logger.info("read");
-                }else if(key.isWritable()){
-                    logger.info("write");
-
-                }
-            }
-        }
-
-
-
+        new Thread(new IOProcessRunnable(ioSelector)).start();
     }
 }
