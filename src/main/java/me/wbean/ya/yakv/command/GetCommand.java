@@ -4,11 +4,9 @@
  */
 package me.wbean.ya.yakv.command;
 
-import me.wbean.ya.yakv.message.MessageUtil;
 import me.wbean.ya.yakv.message.RequestMessage;
 import me.wbean.ya.yakv.message.ResponseMessage;
 import me.wbean.ya.yakv.store.KVEntry;
-import me.wbean.ya.yakv.store.MemoryStore;
 import me.wbean.ya.yakv.store.Store;
 import me.wbean.ya.yakv.store.StoreFactory;
 
@@ -29,7 +27,7 @@ public class GetCommand implements Command{
             }
             return new ResponseMessage(ret.getValue());
         }catch (Exception e){
-            return new ResponseMessage(e.getMessage());
+            return new ResponseMessage("ERROR:get failed");
         }
     }
 }

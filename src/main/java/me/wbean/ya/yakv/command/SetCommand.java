@@ -37,7 +37,7 @@ public class SetCommand implements Command{
 
             return MessageUtil.OK;
         }catch (Exception e){
-            return new ResponseMessage(e.getMessage());
+            return new ResponseMessage("ERROR:set failed");
         }
     }
 }

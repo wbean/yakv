@@ -27,7 +27,7 @@ public class CommandExecuteRunnable implements Runnable {
         RequestMessage request = this.messageDecoder.decode(requestBody);
         Command command = CommandFactory.getCommand(request.getCommand());
         if(command == null){
-            this.outputQueue.offer(new ResponseMessage(socketId, "error command"));
+            this.outputQueue.offer(new ResponseMessage(socketId, "ERROR:bad command"));
         }
         ResponseMessage result = command.execute(request);
         result.setSockedId(socketId);
