@@ -4,18 +4,14 @@
  */
 package me.wbean.ya.yakv.test;
 
-import org.apache.commons.lang3.ArrayUtils;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
-
+import me.wbean.ya.yakv.Client;
 import me.wbean.ya.yakv.server.Server;
 
 /**
@@ -43,6 +39,15 @@ public class ServerTest {
         }
     }
 
+    Client client;
+    public ServerTest(){
+        try {
+            client = new Client("127.0.0.1", 8000);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     //@BeforeClass
     public static void startServer() throws IOException, InterruptedException {
         new Thread(new ServerRunner(new Server(8899))).start();
@@ -54,32 +59,14 @@ public class ServerTest {
         Socket socket = new Socket("127.0.0.1", 8000);
     }
 
-    @Test
-    public void writeMsgTest() throws IOException, InterruptedException {
-        Socket socket = new Socket("127.0.0.1", 8000);
-        String msg = "hello";
-        byte[] msgByte = msg.getBytes();
+    @Test(threadPoolSize = 20, invocationCount = 800,  timeOut = 20000)
+    public void multiSocketTest() throws IOException, InterruptedException {
+        Client client2 = new Client("127.0.0.1", 8000);
+        Assert.assertEquals(client2.execute("hello"), "hello");
+    }
 
-        int unsignedLen = ((short)msgByte.length) & 0x0FFFF;
-
-        byte[] finalMsg = new byte[2];
-        finalMsg[0] = (byte) ((unsignedLen & 0xff00) >> 8);
-        finalMsg[1] = (byte) (unsignedLen & 0xff);
-
-        finalMsg = ArrayUtils.addAll(finalMsg, msgByte);
-
-        TimeUnit.SECONDS.sleep(2);
-
-        socket.getOutputStream().write(finalMsg);
-
-        InputStream is = socket.getInputStream();
-
-        InputStreamReader isr = new InputStreamReader(is);
-
-
-        int aa;
-        while ((aa = isr.read()) > 0){
-            System.out.println((char)aa);
-        }
+    @Test(threadPoolSize = 1, invocationCount = 300, timeOut = 20000)
+    public void singleSocketTest() throws IOException {
+        Assert.assertEquals(client.execute("hello"), "hello");
     }
 }

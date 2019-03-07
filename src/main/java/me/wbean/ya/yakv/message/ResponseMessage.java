@@ -26,4 +26,12 @@ public class ResponseMessage {
     public int getSockedId(){
         return this.sockedId;
     }
+
+    public byte[] getDataBytes(){
+        if(data == null){
+            return MessageUtil.addHeader("ERROR:Empty Response".getBytes());
+        }else {
+            return MessageUtil.addHeader(this.data.getBytes());
+        }
+    }
 }

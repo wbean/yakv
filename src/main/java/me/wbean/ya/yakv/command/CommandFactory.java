@@ -3,6 +3,9 @@ package me.wbean.ya.yakv.command;
 public class CommandFactory {
 
     enum CommandEnum{
+        /**
+         * 心跳检测命令
+         */
         HELLO(new HeartBeatCommand());
 
         Command command;
@@ -17,6 +20,10 @@ public class CommandFactory {
     }
 
     public static Command getCommand(String key){
-        return CommandEnum.valueOf(key.toUpperCase()).getCommand();
+        try {
+            return CommandEnum.valueOf(key.toUpperCase()).getCommand();
+        }catch (Exception e){
+            return null;
+        }
     }
 }

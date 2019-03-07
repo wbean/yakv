@@ -11,9 +11,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Queue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -46,7 +45,6 @@ public class ServerRunnable implements Runnable{
                 readyCount = connectSelector.select(1000);
 
                 if(readyCount == 0) {
-                    logger.info("wait for connect");
                     continue;
                 }
                 Iterator<SelectionKey> selectionKeys = connectSelector.selectedKeys().iterator();
@@ -61,7 +59,7 @@ public class ServerRunnable implements Runnable{
                     selectionKeys.remove();
                 }
             } catch (IOException e) {
-                logger.info("io exception:" + e.getMessage());
+                logger.log(Level.INFO,"Server run IOException", e);
             }
         }
     }

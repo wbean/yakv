@@ -5,6 +5,7 @@
 package me.wbean.ya.yakv.server;
 
 import me.wbean.ya.yakv.CommandExecuteRunnable;
+import me.wbean.ya.yakv.message.MessageUtil;
 import me.wbean.ya.yakv.message.ResponseMessage;
 
 import java.io.IOException;
@@ -12,13 +13,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -63,7 +67,7 @@ public class IOProcessRunnable implements Runnable{
                 writeSocket();
 
             } catch (IOException e) {
-                logger.info("io exception");
+                logger.log(Level.INFO,"IOProcessRunnable.run", e);
             }
         }
     }
@@ -87,8 +91,19 @@ public class IOProcessRunnable implements Runnable{
         ResponseMessage responseMessage;
         while ((responseMessage = outputQueue.poll()) != null){
             SocketChannel socketChannel = socketChannelMap.get(responseMessage.getSockedId());
-            SelectionKey selectionKey = socketChannel.register(writeSelector, SelectionKey.OP_WRITE);
-            selectionKey.attach(responseMessage);
+            SelectionKey key = socketChannel.keyFor(writeSelector);
+            if(key != null){
+                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+                List<ResponseMessage> attachmentList = (List<ResponseMessage>) key.attachment();
+                if(attachmentList == null){
+                    attachmentList = new ArrayList<>();
+                }
+                attachmentList.add(responseMessage);
+            }else {
+                List<ResponseMessage> attachmentList = new ArrayList<>();
+                attachmentList.add(responseMessage);
+                socketChannel.register(writeSelector, SelectionKey.OP_WRITE, attachmentList);
+            }
         }
 
         int count = writeSelector.selectNow();
@@ -100,23 +115,34 @@ public class IOProcessRunnable implements Runnable{
         while (iterator.hasNext()){
             SelectionKey key = iterator.next();
             if(key.isWritable()){
-                writeByteBuffer.clear();
-                ResponseMessage attachment = (ResponseMessage) key.attachment();
-                logger.info("start write:" + attachment.getSockedId());
+                List<ResponseMessage> attachments = (List<ResponseMessage>) key.attachment();
                 SocketChannel socketChannel = (SocketChannel)key.channel();
-                if(attachment.getData() == null){
-                    writeByteBuffer.put("null".getBytes());
-                }else{
-                    writeByteBuffer.put(attachment.getData().getBytes());
+                for (ResponseMessage attachment : attachments) {
+                    writeByteBuffer.clear();
+                    logger.info(String.format("write message to: %d , message:%s", attachment.getSockedId(), attachment.getData()));
+
+                    if(attachment.getData() == null){
+                        writeByteBuffer.put("null".getBytes());
+                    }else{
+                        writeByteBuffer.put(attachment.getDataBytes());
+                    }
+                    writeByteBuffer.flip();
+                    while (writeByteBuffer.hasRemaining()){
+                        socketChannel.write(writeByteBuffer);
+                    }
                 }
+
+                writeByteBuffer.clear();
+                writeByteBuffer.put(MessageUtil.getEndSign());
                 writeByteBuffer.flip();
-                while (writeByteBuffer.hasRemaining()){
-                    socketChannel.write(writeByteBuffer);
-                }
+                socketChannel.write(writeByteBuffer);
+
+                attachments.clear();
             }
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            iterator.remove();
         }
-
-
+        selectionKeySet.clear();
     }
 
     private void readSocket() throws IOException {
@@ -129,36 +155,45 @@ public class IOProcessRunnable implements Runnable{
         while (iterator.hasNext()){
             SelectionKey key = iterator.next();
             if(key.isReadable()){
-                logger.info("start read");
+                logger.info("start read:"+(int)key.attachment());
                 readByteBuffer.clear();
                 SocketChannel socketChannel = (SocketChannel) key.channel();
                 int readLen;
 
+                try {
+                    while ((readLen = socketChannel.read(readByteBuffer)) >= -1) {
+                        if (readLen == 0) {
+                            break;
+                        }
 
-                while ((readLen = socketChannel.read(readByteBuffer)) >= -1){
-                    if(readLen == 0){
-                        break;
+                        if (readLen == -1) {
+                            logger.info("close socket:" + (int) key.attachment());
+                            key.channel();
+                            socketChannel.close();
+                            break;
+                        }
+
+                        readByteBuffer.flip();
+
+                        while (readByteBuffer.hasRemaining()) {
+                            byte[] lengthByte = new byte[2];
+                            readByteBuffer.get(lengthByte);
+                            int length = (lengthByte[0] << 8) + lengthByte[1];
+                            if (length <= 0 || length > (1 << 16)) {
+                                logger.info("protocol error");
+                            }
+                            byte[] bytes = new byte[length];
+                            readByteBuffer.get(bytes);
+                            logger.info(String.format("receive msg from: %d, message:%s", key.attachment(), new String(bytes)));
+                            threadPoolExecutor.submit(new CommandExecuteRunnable((int) key.attachment(), bytes, this.outputQueue));
+                        }
+
+                        readByteBuffer.clear();
                     }
-
-                    if(readLen == -1){
-                        socketChannel.close();
-                        break;
-                    }
-
-                    readByteBuffer.flip();
-
-                    byte[] lengthByte = new byte[2];
-                    readByteBuffer.get(lengthByte);
-
-                    int length = (lengthByte[0] << 8) + lengthByte[1];
-                    byte[] bytes = new byte[length];
-                    if (readByteBuffer.hasRemaining()){
-                        readByteBuffer.get(bytes);
-                    }
-
-                    readByteBuffer.compact();
-                    logger.info("receive msg:" + new String(bytes));
-                    threadPoolExecutor.submit(new CommandExecuteRunnable((int)key.attachment(), bytes, this.outputQueue));
+                }catch (IOException e){
+                    logger.log(Level.WARNING, "IOException while read from socket", e);
+                    key.cancel();
+                    socketChannel.close();
                 }
 
             }
