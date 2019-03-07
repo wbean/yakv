@@ -120,12 +120,7 @@ public class IOProcessRunnable implements Runnable{
                 for (ResponseMessage attachment : attachments) {
                     writeByteBuffer.clear();
                     logger.info(String.format("write message to: %d , message:%s", attachment.getSockedId(), attachment.getData()));
-
-                    if(attachment.getData() == null){
-                        writeByteBuffer.put("null".getBytes());
-                    }else{
-                        writeByteBuffer.put(attachment.getDataBytes());
-                    }
+                    writeByteBuffer.put(attachment.getDataBytes());
                     writeByteBuffer.flip();
                     while (writeByteBuffer.hasRemaining()){
                         socketChannel.write(writeByteBuffer);

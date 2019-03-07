@@ -29,7 +29,7 @@ public class ResponseMessage {
 
     public byte[] getDataBytes(){
         if(data == null){
-            return MessageUtil.addHeader("ERROR:Empty Response".getBytes());
+            return MessageUtil.addHeader("null".getBytes());
         }else {
             return MessageUtil.addHeader(this.data.getBytes());
         }

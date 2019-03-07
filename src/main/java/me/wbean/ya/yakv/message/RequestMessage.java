@@ -13,4 +13,12 @@ public class RequestMessage {
     public String getCommand(){
         return this.command;
     }
+
+    public String[] getParam(){
+        return this.param;
+    }
+
+    public String getParamOf(int index){
+        return this.param[index];
+    }
 }

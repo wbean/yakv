@@ -12,6 +12,9 @@ import org.apache.commons.lang3.ArrayUtils;
  * @date 2019/3/7 下午2:52
  */
 public class MessageUtil {
+    public static final ResponseMessage OK = new ResponseMessage("OK");
+
+
     public static byte[] addHeader(byte[] bytes){
         int unsignedLen = ((short)bytes.length) & 0x0FFFF;
 

@@ -6,7 +6,18 @@ public class CommandFactory {
         /**
          * 心跳检测命令
          */
-        HELLO(new HeartBeatCommand());
+        HELLO(new HeartBeatCommand()),
+
+        /**
+         * get
+         */
+        GET(new GetCommand()),
+
+        /**
+         * set
+         */
+        SET(new SetCommand()),
+        ;
 
         Command command;
 
