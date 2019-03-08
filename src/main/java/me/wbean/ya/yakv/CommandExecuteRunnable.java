@@ -28,6 +28,7 @@ public class CommandExecuteRunnable implements Runnable {
         Command command = CommandFactory.getCommand(request.getCommand());
         if(command == null){
             this.outputQueue.offer(new ResponseMessage(socketId, "ERROR:bad command"));
+            return;
         }
         ResponseMessage result = command.execute(request);
         result.setSockedId(socketId);

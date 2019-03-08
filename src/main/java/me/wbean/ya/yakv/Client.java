@@ -47,17 +47,16 @@ public class Client {
 
         out.write(finalMsg);
 
-        InputStream is = socket.getInputStream();
         byte[] responseLen = new byte[2];
         StringBuilder sb = new StringBuilder();
-        while (is.read(responseLen) > 0){
+        while (in.read(responseLen) > 0){
             int length = (responseLen[0] << 8) + responseLen[1];
             if(length == 0){
                 //长度为0，表示结束标志位
                 break;
             }
             byte[] responseBody = new byte[length];
-            is.read(responseBody);
+            in.read(responseBody);
             sb.append(new String(responseBody));
         }
 
