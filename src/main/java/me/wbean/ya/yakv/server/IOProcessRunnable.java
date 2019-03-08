@@ -5,7 +5,7 @@
 package me.wbean.ya.yakv.server;
 
 import me.wbean.ya.yakv.CommandExecuteRunnable;
-import me.wbean.ya.yakv.message.MessageUtil;
+import me.wbean.ya.yakv.message.MessageHelper;
 import me.wbean.ya.yakv.message.ResponseMessage;
 
 import java.io.IOException;
@@ -21,7 +21,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,11 +38,11 @@ public class IOProcessRunnable implements Runnable{
     private Queue<SocketChannel> currentSockets;
     private Queue<ResponseMessage> outputQueue;
     private ThreadPoolExecutor threadPoolExecutor;
-    private volatile AtomicInteger atomicInteger = new AtomicInteger(0);
+    private volatile AtomicLong socketId = new AtomicLong(0);
 
-    private Map<Integer, SocketChannel> socketChannelMap;
-    private ByteBuffer readByteBuffer = ByteBuffer.allocateDirect(1<<16);
-    private ByteBuffer writeByteBuffer = ByteBuffer.allocateDirect(1<<16);
+    private Map<Long, SocketChannel> socketChannelMap;
+    private ByteBuffer readByteBuffer = ByteBuffer.allocateDirect(MessageHelper.MAX_MSG_LENGTH);
+    private ByteBuffer writeByteBuffer = ByteBuffer.allocateDirect(MessageHelper.MAX_MSG_LENGTH);
 
     public IOProcessRunnable(Selector readSelector, Selector writeSelector, Queue currentSockets, ThreadPoolExecutor threadPoolExecutor, Queue outputQueue){
         this.readSelector = readSelector;
@@ -78,8 +78,8 @@ public class IOProcessRunnable implements Runnable{
             try {
                 socketChannel.configureBlocking(false);
                 SelectionKey selectionKey = socketChannel.register(readSelector, SelectionKey.OP_READ);
-                selectionKey.attach(this.atomicInteger.incrementAndGet());
-                socketChannelMap.put(this.atomicInteger.get(), socketChannel);
+                selectionKey.attach(this.socketId.incrementAndGet());
+                socketChannelMap.put(this.socketId.get(), socketChannel);
             } catch (IOException e) {
                 logger.info("io exception");
             }
@@ -128,7 +128,7 @@ public class IOProcessRunnable implements Runnable{
                 }
 
                 writeByteBuffer.clear();
-                writeByteBuffer.put(MessageUtil.getEndSign());
+                writeByteBuffer.put(MessageHelper.END_SIGN);
                 writeByteBuffer.flip();
                 socketChannel.write(writeByteBuffer);
 
@@ -146,11 +146,12 @@ public class IOProcessRunnable implements Runnable{
             return;
         }
 
-        Iterator<SelectionKey> iterator = readSelector.selectedKeys().iterator();
+        Set<SelectionKey> selectionKeySet = readSelector.selectedKeys();
+        Iterator<SelectionKey> iterator = selectionKeySet.iterator();
         while (iterator.hasNext()){
             SelectionKey key = iterator.next();
             if(key.isReadable()){
-                logger.info("start read:"+(int)key.attachment());
+                logger.info("start read:"+(long)key.attachment());
                 readByteBuffer.clear();
                 SocketChannel socketChannel = (SocketChannel) key.channel();
                 int readLen;
@@ -162,7 +163,7 @@ public class IOProcessRunnable implements Runnable{
                         }
 
                         if (readLen == -1) {
-                            logger.info("close socket:" + (int) key.attachment());
+                            logger.info("close socket:" + (long) key.attachment());
                             key.channel();
                             socketChannel.close();
                             break;
@@ -180,7 +181,7 @@ public class IOProcessRunnable implements Runnable{
                             byte[] bytes = new byte[length];
                             readByteBuffer.get(bytes);
                             logger.info(String.format("receive msg from: %d, message:%s", key.attachment(), new String(bytes)));
-                            threadPoolExecutor.submit(new CommandExecuteRunnable((int) key.attachment(), bytes, this.outputQueue));
+                            threadPoolExecutor.submit(new CommandExecuteRunnable((long) key.attachment(), bytes, this.outputQueue));
                         }
 
                         readByteBuffer.clear();
@@ -192,8 +193,8 @@ public class IOProcessRunnable implements Runnable{
                 }
 
             }
-
             iterator.remove();
         }
+        selectionKeySet.clear();
     }
 }

@@ -2,7 +2,7 @@ package me.wbean.ya.yakv.message;
 
 public class ResponseMessage {
 
-    private int sockedId;
+    private long sockedId;
 
     private String data;
 
@@ -10,12 +10,12 @@ public class ResponseMessage {
         this.data = data;
     }
 
-    public ResponseMessage(int sockedId, String data) {
+    public ResponseMessage(long sockedId, String data) {
         this.sockedId = sockedId;
         this.data = data;
     }
 
-    public void setSockedId(int sockedId) {
+    public void setSockedId(long sockedId) {
         this.sockedId = sockedId;
     }
 
@@ -23,15 +23,15 @@ public class ResponseMessage {
         return this.data;
     }
 
-    public int getSockedId(){
+    public long getSockedId(){
         return this.sockedId;
     }
 
     public byte[] getDataBytes(){
         if(data == null){
-            return MessageUtil.addHeader("null".getBytes());
+            return MessageHelper.addHeader("null".getBytes());
         }else {
-            return MessageUtil.addHeader(this.data.getBytes());
+            return MessageHelper.addHeader(this.data.getBytes());
         }
     }
 }

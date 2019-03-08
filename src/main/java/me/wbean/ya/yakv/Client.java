@@ -24,12 +24,8 @@ public class Client {
     private InputStream in;
     private OutputStream out;
 
-    private String host;
-    private int port;
     public Client(String host, int port) throws IOException {
-        this.host = host;
-        this.port = port;
-        socket = new Socket("127.0.0.1", 8000);
+        socket = new Socket(host, port);
         in = socket.getInputStream();
         out = socket.getOutputStream();
     }

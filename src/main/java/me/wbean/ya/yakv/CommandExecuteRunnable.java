@@ -12,10 +12,10 @@ import java.util.Queue;
 public class CommandExecuteRunnable implements Runnable {
     byte[] requestBody;
     MessageDecoder messageDecoder;
-    int socketId;
+    long socketId;
     Queue<ResponseMessage> outputQueue;
 
-    public CommandExecuteRunnable(int socketId, byte[] requestBody, Queue<ResponseMessage> outputQueue){
+    public CommandExecuteRunnable(long socketId, byte[] requestBody, Queue<ResponseMessage> outputQueue){
         this.socketId = socketId;
         this.requestBody = requestBody;
         this.messageDecoder = new DefaultMessageDecoder();

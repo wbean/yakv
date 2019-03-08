@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
 import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import me.wbean.ya.yakv.Client;
@@ -40,18 +41,12 @@ public class ServerTest {
     }
 
     Client client;
-    public ServerTest(){
-        try {
-            client = new Client("127.0.0.1", 8000);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
-    //@BeforeClass
-    public static void startServer() throws IOException, InterruptedException {
-        new Thread(new ServerRunner(new Server(8899))).start();
+    @BeforeClass
+    public void startServer() throws IOException, InterruptedException {
+        new Thread(new ServerRunner(new Server(8000))).start();
         TimeUnit.SECONDS.sleep(2);
+        client = new Client("127.0.0.1", 8000);
     }
 
     @Test
@@ -59,13 +54,13 @@ public class ServerTest {
         Socket socket = new Socket("127.0.0.1", 8000);
     }
 
-    @Test(threadPoolSize = 20, invocationCount = 800,  timeOut = 20000)
+    @Test(threadPoolSize = 3, invocationCount = 120,  timeOut = 20000)
     public void multiSocketTest() throws IOException, InterruptedException {
         Client client2 = new Client("127.0.0.1", 8000);
         Assert.assertEquals(client2.execute("hello"), "hello");
     }
 
-    @Test(threadPoolSize = 1, invocationCount = 300, timeOut = 20000)
+    @Test(threadPoolSize = 1, invocationCount = 100, timeOut = 20000)
     public void singleSocketTest() throws IOException {
         Assert.assertEquals(client.execute("hello"), "hello");
     }

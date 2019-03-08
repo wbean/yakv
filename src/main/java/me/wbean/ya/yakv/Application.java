@@ -16,6 +16,10 @@ import java.io.IOException;
 public class Application {
 
     public static void main(String[] args) throws IOException {
-        new Server(8000).start();
+        int port = 8000;
+        if(args.length == 1){
+            port = Integer.valueOf(args[0]);
+        }
+        new Server(port).start();
     }
 }

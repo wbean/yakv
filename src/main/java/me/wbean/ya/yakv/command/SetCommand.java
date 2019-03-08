@@ -4,7 +4,7 @@
  */
 package me.wbean.ya.yakv.command;
 
-import me.wbean.ya.yakv.message.MessageUtil;
+import me.wbean.ya.yakv.message.MessageHelper;
 import me.wbean.ya.yakv.message.RequestMessage;
 import me.wbean.ya.yakv.message.ResponseMessage;
 import me.wbean.ya.yakv.store.KVEntry;
@@ -35,7 +35,7 @@ public class SetCommand implements Command{
 
             store.set(new KVEntry(key, valueBuilder.toString(), ttl, System.currentTimeMillis()));
 
-            return MessageUtil.OK;
+            return MessageHelper.OK;
         }catch (Exception e){
             return new ResponseMessage("ERROR:set failed");
         }
